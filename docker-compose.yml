@@ -1,0 +1,12 @@
+# Optional: use if you have Docker. Otherwise run `npm run db:dev` (embedded PostgreSQL).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pfm
+      POSTGRES_PASSWORD: pfm_dev_password
+      POSTGRES_DB: pfm
+    ports: ['54329:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
+volumes:
+  pgdata:

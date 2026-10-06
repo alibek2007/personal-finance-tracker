@@ -1,0 +1,322 @@
+// Money is stored as integer minor units (BIGINT). See docs/DATABASE.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountType {
+  cash
+  bank
+  savings
+  credit_card
+  investment
+  other
+}
+
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+enum CategoryType {
+  income
+  expense
+}
+
+enum BudgetPeriod {
+  weekly
+  monthly
+  yearly
+}
+
+enum Frequency {
+  daily
+  weekly
+  monthly
+  yearly
+}
+
+enum NotificationType {
+  budget_threshold
+  budget_exceeded
+  bill_due
+  goal_progress
+  spending_insight
+  system
+}
+
+enum AuthTokenPurpose {
+  email_verification
+  password_reset
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerifiedAt DateTime?
+  passwordHash    String
+  name            String
+  avatar          String?
+  currency        String    @default("USD") @db.VarChar(3)
+  timezone        String    @default("UTC")
+  locale          String    @default("en-US")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sessions      Session[]
+  authTokens    AuthToken[]
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  goals         SavingsGoal[]
+  recurring     RecurringTransaction[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique // SHA-256 of the cookie token; raw token is never stored
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthToken {
+  id         String           @id @default(cuid())
+  userId     String
+  purpose    AuthTokenPurpose
+  tokenHash  String           @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+model Account {
+  id             String      @id @default(cuid())
+  userId         String
+  name           String
+  type           AccountType
+  institution    String?
+  currency       String      @db.VarChar(3)
+  initialBalance BigInt      @default(0)
+  // Denormalised cache, maintained in the same DB transaction as every transaction write.
+  // Negative = debt (credit cards). Verified by the reconcile service.
+  currentBalance BigInt      @default(0)
+  color          String      @default("#1F4E5A")
+  icon           String      @default("wallet")
+  isArchived     Boolean     @default(false)
+  sortOrder      Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user             User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]          @relation("TxAccount")
+  incomingTransfer Transaction[]          @relation("TxTransferAccount")
+  recurring        RecurringTransaction[]
+
+  @@unique([userId, name])
+  @@index([userId, isArchived])
+}
+
+model Category {
+  id         String       @id @default(cuid())
+  userId     String
+  name       String
+  type       CategoryType
+  icon       String       @default("tag")
+  color      String       @default("#5B6B84")
+  parentId   String?
+  isDefault  Boolean      @default(false)
+  isArchived Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Category?              @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children      Category[]             @relation("CategoryTree")
+  transactions  Transaction[]
+  budgets       Budget[]
+  recurring     RecurringTransaction[]
+
+  @@unique([userId, parentId, name, type])
+  @@index([userId, type])
+  @@index([parentId])
+}
+
+model Transaction {
+  id                     String          @id @default(cuid())
+  userId                 String
+  accountId              String
+  categoryId             String?
+  type                   TransactionType
+  // Always positive; direction comes from `type`. Minor units of `currency`.
+  amount                 BigInt
+  currency               String          @db.VarChar(3)
+  // Transfers only: destination account and the amount credited there (differs when currencies differ).
+  transferAccountId      String?
+  transferAmount         BigInt?
+  isRefund               Boolean         @default(false)
+  description            String
+  merchant               String?
+  // Calendar date in the user's timezone (no time component) -> no timezone drift in reports.
+  date                   DateTime        @db.Date
+  notes                  String?
+  isRecurring            Boolean         @default(false)
+  recurringTransactionId String?
+  // Idempotency for CSV import duplicate detection.
+  importHash             String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account           Account               @relation("TxAccount", fields: [accountId], references: [id], onDelete: Restrict)
+  transferAccount   Account?              @relation("TxTransferAccount", fields: [transferAccountId], references: [id], onDelete: Restrict)
+  category          Category?             @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  recurringTemplate RecurringTransaction? @relation(fields: [recurringTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date(sort: Desc)])
+  @@index([userId, accountId, date(sort: Desc)])
+  @@index([userId, categoryId, date(sort: Desc)])
+  @@index([userId, type, date(sort: Desc)])
+  @@index([accountId])
+  @@index([transferAccountId])
+  @@index([userId, importHash])
+  // A recurring payment can never be recorded twice for the same day, even if two processes race.
+  @@unique([recurringTransactionId, date])
+}
+
+model Budget {
+  id             String       @id @default(cuid())
+  userId         String
+  categoryId     String
+  amount         BigInt
+  currency       String       @db.VarChar(3)
+  period         BudgetPeriod
+  startDate      DateTime     @db.Date
+  endDate        DateTime?    @db.Date
+  // Fraction of the budget (percent, 1-100) at which a notification fires.
+  alertThreshold Int          @default(80)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, categoryId])
+}
+
+model SavingsGoal {
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  targetAmount  BigInt
+  currentAmount BigInt    @default(0)
+  currency      String    @db.VarChar(3)
+  deadline      DateTime? @db.Date
+  color         String    @default("#1F4E5A")
+  icon          String    @default("target")
+  isArchived    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions GoalContribution[]
+
+  @@index([userId, isArchived])
+}
+
+model GoalContribution {
+  id        String   @id @default(cuid())
+  goalId    String
+  userId    String
+  amount    BigInt // may be negative (withdrawal)
+  date      DateTime @db.Date
+  note      String?
+  createdAt DateTime @default(now())
+
+  goal SavingsGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId, date])
+  @@index([userId])
+}
+
+model RecurringTransaction {
+  id             String          @id @default(cuid())
+  userId         String
+  accountId      String
+  categoryId     String?
+  type           TransactionType
+  amount         BigInt
+  currency       String          @db.VarChar(3)
+  description    String
+  frequency      Frequency
+  interval       Int             @default(1) // every N frequency units
+  startDate      DateTime        @db.Date
+  nextOccurrence DateTime        @db.Date
+  endDate        DateTime?       @db.Date
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category     Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  transactions Transaction[]
+
+  @@index([userId, isActive, nextOccurrence])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  // Dedupe key (e.g. "budget:<id>:2026-10:80") so a condition notifies once per period.
+  dedupeKey String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String // e.g. auth.login, auth.logout, export.transactions
+  entity    String?
+  entityId  String?
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action])
+}

@@ -1,0 +1,94 @@
+/*
+ * Design tokens — "Editorial Financial Intelligence". See docs/DESIGN_SYSTEM.md.
+ * Components consume semantic tokens only; never raw hex.
+ */
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #f6f3ec;
+  --surface: #fbf9f4;
+  --sunk: #eeeae0;
+  --rule: #dad5c8;
+  --rule-strong: #b9b3a4;
+
+  /* text */
+  --ink: #1c1e21;
+  --muted: #5b6169;
+
+  /* brand + meaning */
+  --accent: #1f4e5a;
+  --accent-hover: #17404a;
+  --accent-ink: #ffffff;
+  --accent-wash: #e3ebec;
+  --gain: #2e6b4b;
+  --gain-wash: #e1ece4;
+  --loss: #ad4029;
+  --loss-wash: #f3e1db;
+  --warn: #a8741a;
+  --warn-wash: #f3e8d0;
+  /* warn used as text needs more weight than the bar colour */
+  --warn-text: #7a5410;
+
+  /* chart categorical palette (always paired with labels) */
+  --chart-1: #1f4e5a;
+  --chart-2: #b98a2e;
+  --chart-3: #b2432b;
+  --chart-4: #6f8f72;
+  --chart-5: #5b6b84;
+  --chart-6: #85687a;
+  --chart-7: #b9ae94;
+  --chart-8: #3a3f46;
+
+  /* shape + elevation */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --shadow-float: 0 8px 28px -8px rgb(28 30 33 / 0.22), 0 2px 6px rgb(28 30 33 / 0.08);
+
+  /* motion */
+  --dur-micro: 120ms;
+  --dur-panel: 200ms;
+  --dur-chart: 400ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* type */
+  --font-ui: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #14161a;
+  --surface: #1b1e23;
+  --sunk: #101215;
+  --rule: #2a2e35;
+  --rule-strong: #444a54;
+
+  --ink: #ece9e1;
+  --muted: #9aa0a8;
+
+  --accent: #6fb3c2;
+  --accent-hover: #86c3d0;
+  --accent-ink: #0e1a1e;
+  --accent-wash: #1d2f35;
+  --gain: #6dbe93;
+  --gain-wash: #1b2d24;
+  --loss: #e8826b;
+  --loss-wash: #33201b;
+  --warn: #d9a441;
+  --warn-wash: #302612;
+  --warn-text: #e3b865;
+
+  --chart-1: #6fb3c2;
+  --chart-2: #d9a441;
+  --chart-3: #e8826b;
+  --chart-4: #8fb594;
+  --chart-5: #8d9bb5;
+  --chart-6: #b592a7;
+  --chart-7: #cfc5aa;
+  --chart-8: #aab0b8;
+
+  --shadow-float: 0 10px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
+}

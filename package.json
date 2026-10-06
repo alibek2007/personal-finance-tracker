@@ -1,0 +1,42 @@
+{
+  "name": "personal-finance-tracker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "e2e"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "npm run dev -w @pfm/api",
+    "dev:web": "npm run dev -w @pfm/web",
+    "build": "npm run build -w @pfm/api && npm run build -w @pfm/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:dev": "npm run db:dev -w @pfm/api",
+    "db:migrate": "npm run db:migrate -w @pfm/api",
+    "db:seed": "npm run db:seed -w @pfm/api",
+    "test:e2e": "npm run test -w @pfm/e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^16.0.0",
+    "npm-run-all2": "^7.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^3.0.0"
+  }
+}

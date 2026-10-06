@@ -1,0 +1,45 @@
+{
+  "name": "@pfm/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/server.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "db:dev": "tsx scripts/dev-db.ts",
+    "db:generate": "node --env-file-if-exists=../../.env ../../node_modules/prisma/build/index.js generate",
+    "db:migrate": "node --env-file-if-exists=../../.env ../../node_modules/prisma/build/index.js migrate dev",
+    "db:deploy": "node --env-file-if-exists=../../.env ../../node_modules/prisma/build/index.js migrate deploy",
+    "db:studio": "node --env-file-if-exists=../../.env ../../node_modules/prisma/build/index.js studio",
+    "db:seed": "tsx --env-file-if-exists=../../.env prisma/seed.ts",
+    "db:explain": "tsx --env-file-if-exists=../../.env scripts/explain-review.ts"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^10.0.0",
+    "@fastify/swagger": "^9.0.0",
+    "@fastify/swagger-ui": "^5.0.0",
+    "@node-rs/argon2": "^2.0.0",
+    "@pfm/finance": "*",
+    "@pfm/validation": "*",
+    "@prisma/client": "^6.0.0",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0",
+    "fastify-type-provider-zod": "^6.0.0",
+    "prisma": "^6.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^17.0.0-beta.1",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0"
+  }
+}

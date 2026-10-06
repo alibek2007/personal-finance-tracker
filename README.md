@@ -50,7 +50,7 @@ Track accounts, spending, budgets, savings goals and subscriptions in one calm, 
 You need **Node.js 20.11+** (developed on 24) and npm 10+. No separate database install is required: `npm run db:dev` runs a real embedded PostgreSQL.
 
 ```bash
-git clone <this-repo-url> ledger && cd ledger
+git clone https://github.com/alibek2007/personal-finance-tracker.git && cd personal-finance-tracker
 npm install
 cp .env.example .env          # then set SESSION_SECRET to a random string of 32+ characters
 npm run db:dev                # terminal 1: embedded PostgreSQL on :54329
